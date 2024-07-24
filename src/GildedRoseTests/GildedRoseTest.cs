@@ -35,8 +35,9 @@ namespace GildedRoseTests
         [InlineData(1, 19)]
         [InlineData(2, 18)]
         [InlineData(10, 10)]
-        [InlineData(11, 8)]
+        [InlineData(11, 8)] // degrades twice as fast after sell by date
         [InlineData(12, 6)]
+        [InlineData(100, 0)] // quality cannot be negative
         public void UpdateQuality_AltersStandardItem(int days, int expectedQuality)
         {
             var standardItem = _items[0];
@@ -52,8 +53,8 @@ namespace GildedRoseTests
             Assert.Equal(expectedQuality, standardItem.Quality);
         }
 
-        [Fact(Skip = "Veried results do not match this test")]
-        public void UpdateQuality_QualityIsNeverMoreThan50_UnlessSulfuras()
+        [Fact]
+        public void UpdateQuality_QualityIsNeverMoreThan50OrNegative_UnlessSulfuras()
         {
             for (int i = 0; i < 100; i++)
             {
@@ -61,69 +62,71 @@ namespace GildedRoseTests
             }
             foreach (var item in _items.Where(x => !x.Name.StartsWith("Sulfuras")))
             {
-                Assert.False(item.Quality > 50, userMessage: item.Name);
+                Assert.False(item.Quality > 50, userMessage: $"{item.Name} is more than 50");
+                Assert.False(item.Quality < 0, userMessage: $"{item.Name} is less than 0");
             }
         }
 
-        [Fact]
-        public void UpdateQuality_AltersBrieItemWhereRequired_AfterOneDay()
+        [Theory]
+        [InlineData(0, 5)]
+        [InlineData(1, 6)]
+        [InlineData(100, 50)] // max quality is 50
+        public void UpdateQuality_AltersBrieItem(int days, int expectedQuality)
         {
             var brieItem = _items[2];
-            _app.UpdateQuality();
+            var initialSellIn = brieItem.SellIn;
+
+            for (var i = 0; i < days; i++)
+            {
+                _app.UpdateQuality();
+            }
+
             Assert.Equal("Aged Brie", brieItem.Name);
-            Assert.Equal(9, brieItem.SellIn);
-            Assert.Equal(6, brieItem.Quality);
+            Assert.Equal(initialSellIn - days, brieItem.SellIn);
+            Assert.Equal(expectedQuality, brieItem.Quality);
         }
 
-        [Fact]
-        public void UpdateQuality_AltersSulfurasItemWhereRequired_AfterOneDay()
+        [Theory]
+        [InlineData(0, 80)] // legendary item always has quality of 80 and remaining days do not change
+        [InlineData(10, 80)]
+        [InlineData(100, 80)]
+        public void UpdateQuality_AltersSulfurasItem(int days, int expectedQuality)
         {
             var sulfurasItem = _items[3];
-            _app.UpdateQuality();
+            var initialSellIn = sulfurasItem.SellIn;
+
+            for (var i = 0; i < days; i++)
+            {
+                _app.UpdateQuality();
+            }
+
             Assert.Equal("Sulfuras, Hand of Ragnaros", sulfurasItem.Name);
-            Assert.Equal(10, sulfurasItem.SellIn);
-            Assert.Equal(80, sulfurasItem.Quality);
+            Assert.Equal(initialSellIn, sulfurasItem.SellIn);
+            Assert.Equal(expectedQuality, sulfurasItem.Quality);
         }
 
-        [Fact]
-        public void UpdateQuality_AltersBackstagePassItemWhereRequired_AfterOneDay()
+        [Theory]
+        [InlineData(0, 5)]
+        [InlineData(1, 6)] // increases by 1 when more than 10 days remaining
+        [InlineData(5, 10)]
+        [InlineData(6, 12)] // increases by 2 when 10 days remaining
+        [InlineData(9, 18)]
+        [InlineData(10, 20)]
+        [InlineData(11, 23)] // increases by 3 when 5 days remaining
+        [InlineData(12, 26)]
+        [InlineData(16, 0)] // no value after concert
+        [InlineData(100, 0)] // quality cannot be negative
+        public void UpdateQuality_AltersBackstagePass(int days, int expectedQuality)
         {
             var backstageItem = _items[4];
-            _app.UpdateQuality();
-            Assert.Equal("Backstage passes to a TAFKAL80ETC concert", backstageItem.Name);
-            Assert.Equal(14, backstageItem.SellIn);
-            Assert.Equal(6, backstageItem.Quality);
-        }
-
-        [Fact]
-        public void UpdateQuality_AltersBackstagePassDoubleIncrease_When10DaysRemaining()
-        {
-            var backstageItem = _items[4];
+            var initialSellIn = backstageItem.SellIn;
             var quality = backstageItem.Quality;
-            while (backstageItem.SellIn > 9)
-            {
-                _app.UpdateQuality();
-                if (backstageItem.SellIn > 10)
-                {
-                    quality++;
-                    Assert.Equal(quality, backstageItem.Quality);
-                }
-            }
-            Assert.Equal(9, backstageItem.SellIn);
-            Assert.Equal(12, backstageItem.Quality);
-        }
-
-        [Fact]
-        public void UpdateQuality_AltersBackstagePassTripleIncrease_When5DaysRemaining()
-        {
-            var backstageItem = _items[4];
-            var quality = backstageItem.Quality;
-            while (backstageItem.SellIn > 4)
+            for (var i = 0; i < days; i++)
             {
                 _app.UpdateQuality();
             }
-            Assert.Equal(4, backstageItem.SellIn);
-            Assert.Equal(23, backstageItem.Quality);
+            Assert.Equal(initialSellIn - days, backstageItem.SellIn);
+            Assert.Equal(expectedQuality, backstageItem.Quality);
         }
 
         [Theory]
@@ -133,6 +136,7 @@ namespace GildedRoseTests
         [InlineData(10, 20)]
         [InlineData(11, 16)]
         [InlineData(12, 12)]
+        [InlineData(100, 0)] // quality cannot be negative
         public void UpdateQuality_AltersConjuredItem(int days, int expectedQuality)
         {
             var conjuredItem = _items[1];

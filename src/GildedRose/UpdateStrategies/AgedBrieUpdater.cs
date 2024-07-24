@@ -10,7 +10,7 @@ namespace GildedRose.UpdateStrategies
             if (item.Quality < 50)
             {
                 item.Quality++;
-                if (item.SellIn < 0)
+                if (item.Quality < 50 && item.SellIn < 0)
                 {
                     item.Quality++;
                 }
