@@ -5,6 +5,7 @@ using Xunit;
 
 namespace GildedRoseTests
 {
+    [Trait("Category", "UnitTest")]
     public class GildedRoseTest
     {
         private GildedRoseKata.GildedRose _app => new GildedRoseKata.GildedRose(_items);
@@ -14,8 +15,8 @@ namespace GildedRoseTests
         {
             _items = new List<Item>
             {
-                new Item { Name = "standard", SellIn = 10, Quality = 5 },
-                new Item { Name = "another", SellIn = 10, Quality = 5 },
+                new Item { Name = "standard", SellIn = 10, Quality = 20 },
+                new Item { Name = "Conjured Mana Cake", SellIn = 10, Quality = 40 },
                 new Item { Name = "Aged Brie", SellIn = 10, Quality = 5 },
                 new Item { Name = "Sulfuras, Hand of Ragnaros", SellIn = 10, Quality = 80 },
                 new Item { Name = "Backstage passes to a TAFKAL80ETC concert", SellIn = 15, Quality = 5 },
@@ -29,13 +30,26 @@ namespace GildedRoseTests
             Assert.Equal(5, _items.Count);
         }
 
-        [Fact]
-        public void UpdateQuality_AltersStandardItemWhereRequired_AfterOneDay()
+        [Theory]
+        [InlineData(0, 20)]
+        [InlineData(1, 19)]
+        [InlineData(2, 18)]
+        [InlineData(10, 10)]
+        [InlineData(11, 8)]
+        [InlineData(12, 6)]
+        public void UpdateQuality_AltersStandardItem(int days, int expectedQuality)
         {
-            _app.UpdateQuality();
-            Assert.Equal("standard", _items[0].Name);
-            Assert.Equal(9, _items[0].SellIn);
-            Assert.Equal(4, _items[0].Quality);
+            var standardItem = _items[0];
+            var initialSellIn = standardItem.SellIn;
+            Assert.Equal("standard", standardItem.Name);
+
+            for (var i = 0; i < days; i++)
+            {
+                _app.UpdateQuality();
+            }
+
+            Assert.Equal(initialSellIn - days, standardItem.SellIn);
+            Assert.Equal(expectedQuality, standardItem.Quality);
         }
 
         [Fact(Skip = "Veried results do not match this test")]
@@ -47,7 +61,7 @@ namespace GildedRoseTests
             }
             foreach (var item in _items.Where(x => !x.Name.StartsWith("Sulfuras")))
             {
-                Assert.False(item.Quality > 50, item.Name);
+                Assert.False(item.Quality > 50, userMessage: item.Name);
             }
         }
 
@@ -110,6 +124,28 @@ namespace GildedRoseTests
             }
             Assert.Equal(4, backstageItem.SellIn);
             Assert.Equal(23, backstageItem.Quality);
+        }
+
+        [Theory]
+        [InlineData(0, 40)]
+        [InlineData(1, 38)]
+        [InlineData(2, 36)]
+        [InlineData(10, 20)]
+        [InlineData(11, 16)]
+        [InlineData(12, 12)]
+        public void UpdateQuality_AltersConjuredItem(int days, int expectedQuality)
+        {
+            var conjuredItem = _items[1];
+            var initialSellIn = conjuredItem.SellIn;
+            Assert.Equal("Conjured Mana Cake", conjuredItem.Name);
+
+            for (var i = 0; i < days; i++)
+            {
+                _app.UpdateQuality();
+            }
+
+            Assert.Equal(initialSellIn - days, conjuredItem.SellIn);
+            Assert.Equal(expectedQuality, conjuredItem.Quality);
         }
     }
 }

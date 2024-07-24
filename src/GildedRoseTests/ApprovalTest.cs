@@ -1,5 +1,4 @@
-﻿
-using GildedRoseKata;
+﻿using GildedRoseKata;
 
 using System;
 using System.IO;
@@ -12,6 +11,7 @@ using Xunit;
 
 namespace GildedRoseTests
 {
+    [Trait("Category", "TextTest")]
     public class ApprovalTest
     {
         [Fact]
